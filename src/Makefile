@@ -141,6 +141,7 @@ PACKAGE = \
 	phonon \
 	nufeb \
 	hdf5 \
+	epidermis \
 	plasmid # NUFEB-specific
 
 # NOTE: the last four packages must remain at the end since
@@ -202,9 +203,7 @@ PACKMOST = \
 	dielectric \
 	ml-iap \
 	phonon \
-	nufeb \
 	hdf5 \
-	plasmid
 
 # NOTE ^^^^^: the last three packages must remain at the end since
 # they depend on other packages to be installed first.
