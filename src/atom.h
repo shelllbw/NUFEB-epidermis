@@ -144,10 +144,13 @@ class Atom : protected Pointers {
   double *edpd_cv;    // heat capacity
   int cc_species;
 
-  // USER-NUFEB package
+  // NUFEB package
 
   double *biomass, *outer_radius, *outer_mass;
   int *bacillus;
+
+  // EPIDERMIS package
+  double **shape;
 
   // MESONT package
 
@@ -206,10 +209,13 @@ class Atom : protected Pointers {
   int contact_radius_flag, smd_data_9_flag, smd_stress_flag;
   int eff_plastic_strain_flag, eff_plastic_strain_rate_flag;
 
-  // USER-NUFEB package
+  // NUFEB package
   int bacillus_flag, coccus_flag;
   int biomass_flag;
   int outer_radius_flag, outer_mass_flag;
+
+  // EPIDERMIS package
+  int skin_flag;
 
   // Peridynamics scale factor, used by dump cfg
 

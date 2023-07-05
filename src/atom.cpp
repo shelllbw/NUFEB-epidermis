@@ -130,6 +130,9 @@ Atom::Atom(LAMMPS *lmp) : Pointers(lmp)
   biomass = nullptr;
   bacillus = nullptr;
 
+  // EPIDERMIS
+  shape = nullptr;
+
   // molecular systems
 
   molecule = nullptr;
@@ -493,11 +496,14 @@ void Atom::peratom_create()
   add_peratom("ervelforce",&ervelforce,DOUBLE,0);
   add_peratom("etag",&etag,INT,0);
 
-  // USER-NUFEB
+  // NUFEB package
   add_peratom("biomass",&biomass,DOUBLE,0);
   add_peratom("outer_mass",&outer_mass,DOUBLE,0);
   add_peratom("outer_radius",&outer_radius,DOUBLE,0);
   add_peratom("bacillus",&bacillus,INT,0);
+
+  // EPIDERMIS package
+  add_peratom("shape",&shape,DOUBLE,3);
 
   // CG-DNA package
 
@@ -638,6 +644,8 @@ void Atom::set_atomflag_defaults()
   bacillus_flag = coccus_flag = 0;
   outer_radius_flag = outer_mass_flag = 0;
   biomass_flag = 0;
+  // EPIDERMIS package
+  skin_flag = 0;
 
   pdscale = 1.0;
 }
@@ -2758,6 +2766,9 @@ void *Atom::extract(const char *name)
   if (strcmp(name,"outer_radius") == 0) return (void *) outer_radius;
   if (strcmp(name,"bacillus") == 0) return (void *) bacillus;
 
+  // EPIDERMIS package
+  if (strcmp(name, "shape") == 0) return (void *) shape;
+
   // end of customization section
   // --------------------------------------------------------------------
 
@@ -2884,6 +2895,9 @@ int Atom::extract_datatype(const char *name)
   if (strcmp(name,"biomass") == 0) return LAMMPS_DOUBLE;
   if (strcmp(name,"outer_mass") == 0) return LAMMPS_DOUBLE;
   if (strcmp(name,"outer_radius") == 0) return LAMMPS_DOUBLE;
+
+  // EPIDERMIS package
+  if (strcmp(name,"shape") == 0) return LAMMPS_DOUBLE_2D;
 
   // end of customization section
   // --------------------------------------------------------------------

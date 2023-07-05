@@ -13,28 +13,33 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(nufeb/growth/stem,FixGrowthStem)
+FixStyle(nufeb/division/basal,FixDivideBasal)
 
 #else
 
-#ifndef LMP_FIX_GROWTH_TA_H
-#define LMP_FIX_GROWTH_TA_H
+#ifndef LMP_FIX_DIVIDE_STEM_H
+#define LMP_FIX_DIVIDE_STEM_H
 
-#include "fix_growth.h"
+#include "fix_divide.h"
 
 namespace LAMMPS_NS {
 
-class FixGrowthTA: public FixGrowth {
+class FixDivideStem : public FixDivide {
  public:
-  FixGrowthTA(class LAMMPS *, int, char **);
-  virtual ~FixGrowthTA() {}
 
-  virtual void update_atoms();
-  virtual void update_cells() {}
-
+  FixDivideStem(class LAMMPS *, int, char **);
+  virtual ~FixDivideStem();
+  virtual void compute();
+  
  protected:
-  int isub;
-  double growth;
+  double diameter;
+  double eps_density;
+  int seed;
+
+  void spatial_regulate(int, double*, double*, double, double);
+
+
+  class RanPark *random;
 };
 
 }

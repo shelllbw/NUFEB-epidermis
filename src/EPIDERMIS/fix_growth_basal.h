@@ -13,21 +13,21 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(nufeb/growth/stem,FixGrowthStem)
+FixStyle(nufeb/growth/basal,FixGrowthBasal)
 
 #else
 
-#ifndef LMP_FIX_GROWTH_STEM_H
-#define LMP_FIX_GROWTH_STEM_H
+#ifndef LMP_FIX_GROWTH_BASAL_H
+#define LMP_FIX_GROWTH_BASAL_H
 
 #include "fix_growth.h"
 
 namespace LAMMPS_NS {
 
-class FixGrowthStem: public FixGrowth {
+class FixGrowthBasal: public FixGrowth {
  public:
-  FixGrowthStem(class LAMMPS *, int, char **);
-  virtual ~FixGrowthStem() {}
+  FixGrowthBasal(class LAMMPS *, int, char **);
+  virtual ~FixGrowthBasal() {}
 
   virtual void update_atoms();
   virtual void update_cells() {}

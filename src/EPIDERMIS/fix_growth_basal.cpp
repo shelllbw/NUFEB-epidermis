@@ -17,7 +17,7 @@
 #include "atom.h"
 #include "error.h"
 
-#include "fix_growth_ta.h"
+#include "fix_growth_basal.h"
 #include "grid.h"
 #include "group.h"
 #include "modify.h"
@@ -30,11 +30,11 @@ using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
-FixGrowthTA::FixGrowthTA(LAMMPS *lmp, int narg, char **arg) :
+FixGrowthBasal::FixGrowthBasal(LAMMPS *lmp, int narg, char **arg) :
   FixGrowth(lmp, narg, arg)
 {
   if (narg < 4)
-    error->all(FLERR, "Illegal fix nufeb/growth/ta command");
+    error->all(FLERR, "Illegal fix nufeb/growth/stem command");
 
   isub = -1;
   growth = 0.0;
@@ -49,14 +49,14 @@ FixGrowthTA::FixGrowthTA(LAMMPS *lmp, int narg, char **arg) :
       growth = utils::numeric(FLERR,arg[iarg+1],true,lmp);
       iarg += 2;
     } else {
-      error->all(FLERR, "Illegal fix nufeb/growth/ta command");
+      error->all(FLERR, "Illegal fix nufeb/growth/stem command");
     }
   }
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixGrowthTA::update_atoms()
+void FixGrowthBasal::update_atoms()
 {
   for (int i = 0; i < grid->ncells; i++) {
     grid->growth[igroup][i][0] = growth;
