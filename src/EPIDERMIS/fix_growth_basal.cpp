@@ -34,19 +34,27 @@ FixGrowthBasal::FixGrowthBasal(LAMMPS *lmp, int narg, char **arg) :
   FixGrowth(lmp, narg, arg)
 {
   if (narg < 4)
-    error->all(FLERR, "Illegal fix nufeb/growth/stem command");
+    error->all(FLERR, "Illegal fix nufeb/growth/basal command");
 
   isub = -1;
   growth = 0.0;
+  yield = 1.0;
+  sub_affinity = 0.0;
 
   isub = grid->find(arg[3]);
   if (isub < 0)
     error->all(FLERR, "Can't find substrate name");
+  sub_affinity = utils::numeric (FLERR,arg[4],true,lmp);
+  if (sub_affinity <= 0)
+    error->all(FLERR, "Growth factor affinity must be greater than zero");
 
-  int iarg = 4;
+  int iarg = 5;
   while (iarg < narg) {
     if (strcmp(arg[iarg], "growth") == 0) {
       growth = utils::numeric(FLERR,arg[iarg+1],true,lmp);
+      iarg += 2;
+    } else if (strcmp(arg[iarg], "yield") == 0 ) {
+      yield = utils::numeric(FLERR,arg[iarg+1],true,lmp);
       iarg += 2;
     } else {
       error->all(FLERR, "Illegal fix nufeb/growth/stem command");
@@ -58,9 +66,27 @@ FixGrowthBasal::FixGrowthBasal(LAMMPS *lmp, int narg, char **arg) :
 
 void FixGrowthBasal::update_atoms()
 {
-  for (int i = 0; i < grid->ncells; i++) {
-    grid->growth[igroup][i][0] = growth;
-  }
+  double **conc = grid->conc;
 
-  update_atoms_coccus();
+  for (int i = 0; i < grid->ncells; i++) {
+    grid->growth[igroup][i][0] = growth * conc[isub][i] / (sub_affinity + conc[isub][i]);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixGrowthBasal::update_cells ()
+{
+  double **conc = grid->conc;
+  double **reac = grid->reac;
+  double **dens = grid->dens;
+
+  for (int i = 0; i < grid->ncells; i++) {
+    if (grid->mask[i] & GRID_MASK) {
+      double tmp1 = growth * conc[isub][i] / (sub_affinity + conc[isub][i]);
+
+      // growth factor secretion
+      reac[isub][i] = 1 / yield * tmp1 * dens[igroup][i];
+    }
+  }
 }
