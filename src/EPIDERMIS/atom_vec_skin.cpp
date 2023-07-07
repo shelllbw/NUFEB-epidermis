@@ -92,22 +92,18 @@ void AtomVecSkin::init()
 {
   AtomVec::init();
 
-  // check if optional radvary setting should have been set to 1
+  // check if optional shapevary setting should have been set to 1
 
   for (int i = 0; i < modify->nfix; i++)
     if (strcmp(modify->fix[i]->style,"adapt") == 0) {
       FixAdapt *fix = (FixAdapt *) modify->fix[i];
       if (fix->diamflag && shapevary == 0)
         error->all(FLERR,"Fix adapt changes particle radii "
-                         "but atom_style coccus is not dynamic");
-    } else if (strcmp(modify->fix[i]->style,"nufeb/monod") == 0) {
-      if (shapevary == 0)
-        error->all(FLERR,"Fix nufeb/monod changes particle radii "
-                         "but atom_style coccus is not dynamic");
-    } else if (strcmp(modify->fix[i]->style,"nufeb/divide") == 0) {
+                         "but atom_style skin is not dynamic");
+    } else if (strcmp(modify->fix[i]->style,"nufeb/division") == 0) {
       if (shapevary == 0)
         error->all(FLERR,"Fix nufeb/divide changes particle radii "
-                         "but atom_style coccus is not dynamic");
+                         "but atom_style skin is not dynamic");
     }
 }
 
@@ -141,27 +137,52 @@ void AtomVecSkin::create_atom_post(int ilocal)
 
 void AtomVecSkin::data_atom_post(int ilocal)
 {
-  radius_one = 0.5 * atom->radius[ilocal];
-  radius[ilocal] = radius_one;
-  if (radius_one > 0.0)
-    rmass[ilocal] *= 4.0*MY_PI/3.0 * radius_one*radius_one*radius_one;
+  shape_a = 0.5 * shape[ilocal][0];
+  shape_b = 0.5 * shape[ilocal][1];
+  shape_c = 0.5 * shape[ilocal][2];
 
-  if (rmass[ilocal] <= 0.0)
-    error->one(FLERR,"Invalid density in Atoms section of data file");
+  shape[ilocal][0] = shape_a;
+  shape[ilocal][1] = shape_b;
+  shape[ilocal][2] = shape_c;
 
-  omega[ilocal][0] = 0.0;
-  omega[ilocal][1] = 0.0;
-  omega[ilocal][2] = 0.0;
+  if (shape_a<=0 || shape_b<=0 || shape_c<=0)
+    error->one(FLERR,"Invalid cell shape in Atoms section of data file");
 
-  outer_radius_one = 0.5 * atom->outer_radius[ilocal];
-  outer_radius[ilocal] = outer_radius_one;
-  if (outer_radius[ilocal] < radius[ilocal]) {
-    error->one(FLERR,"Outer radius must be greater than or equal to radius");
-  }
+  rmass[ilocal] *= 4.0*MY_PI/3.0 * shape_a*shape_b*shape_c;
 
-  outer_mass[ilocal] = (4.0*MY_PI/3.0)*
-                       ((outer_radius[ilocal]*outer_radius[ilocal]*outer_radius[ilocal])
-                        -(radius[ilocal]*radius[ilocal]*radius[ilocal])) * 30;
+  biomass[ilocal] = 1.0;
+}
 
+/* ----------------------------------------------------------------------
+   modify values for AtomVec::pack_data() to pack
+------------------------------------------------------------------------- */
+
+void AtomVecSkin::pack_data_pre(int ilocal)
+{
+  shape_a = shape[ilocal][0];
+  shape_b = shape[ilocal][1];
+  shape_c = shape[ilocal][2];
+  rmass_one = rmass[ilocal];
+
+  shape[ilocal][0] *= 2.0;
+  shape[ilocal][1] *= 2.0;
+  shape[ilocal][2] *= 2.0;
+
+  if (shape_a > 0 && shape_b >0 && shape_c >0)
+    rmass[ilocal] =
+        rmass_one / (4.0*MY_PI/3.0 * shape_a*shape_b*shape_c);
+}
+
+/* ----------------------------------------------------------------------
+   unmodify values packed by AtomVec::pack_data()
+------------------------------------------------------------------------- */
+
+void AtomVecSkin::pack_data_post(int ilocal)
+{
+  shape[ilocal][0] = shape_a;
+  shape[ilocal][1] = shape_b;
+  shape[ilocal][2] = shape_c;
+
+  rmass[ilocal] = rmass_one;
   biomass[ilocal] = 1.0;
 }

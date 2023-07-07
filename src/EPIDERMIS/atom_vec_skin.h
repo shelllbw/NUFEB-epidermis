@@ -37,11 +37,12 @@ class AtomVecSkin : public AtomVec {
   void pack_data_post(int);
 
  private:
-  double *rmass, *biomass;
-  double **shape;
+  double *rmass, *biomass;    // wet and dry mass
+  double **shape;             // 3 radii in xyz
 
   int skin_flag;
   double rmass_one;
+  double shape_a, shape_b, shape_c;
 
   int shapevary;
 };
