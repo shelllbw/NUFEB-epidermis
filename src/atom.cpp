@@ -132,6 +132,7 @@ Atom::Atom(LAMMPS *lmp) : Pointers(lmp)
 
   // EPIDERMIS
   shape = nullptr;
+  alpha = nullptr;
 
   // molecular systems
 
@@ -504,6 +505,7 @@ void Atom::peratom_create()
 
   // EPIDERMIS package
   add_peratom("shape",&shape,DOUBLE,3);
+  add_peratom("alpha",&alpha,DOUBLE,0);
 
   // CG-DNA package
 
@@ -2768,6 +2770,7 @@ void *Atom::extract(const char *name)
 
   // EPIDERMIS package
   if (strcmp(name, "shape") == 0) return (void *) shape;
+  if (strcmp(name, "alpha") == 0) return (void *) alpha;
 
   // end of customization section
   // --------------------------------------------------------------------
@@ -2898,6 +2901,7 @@ int Atom::extract_datatype(const char *name)
 
   // EPIDERMIS package
   if (strcmp(name,"shape") == 0) return LAMMPS_DOUBLE_2D;
+  if (strcmp(name,"alpha") == 0) return LAMMPS_DOUBLE;
 
   // end of customization section
   // --------------------------------------------------------------------

@@ -13,7 +13,7 @@
 
 #ifdef ATOM_CLASS
 // clang-format off
-AtomStyle(skin,AtomVevSkin);
+AtomStyle(epidermis,AtomVecSkin);
 // clang-format on
 #else
 
@@ -39,10 +39,12 @@ class AtomVecSkin : public AtomVec {
  private:
   double *rmass, *biomass;    // wet and dry mass
   double **shape;             // 3 radii in xyz
+  double *alpha;              // deformation rate
 
   int skin_flag;
   double rmass_one;
   double shape_a, shape_b, shape_c;
+  double alpha_one;
 
   int shapevary;
 };

@@ -151,6 +151,7 @@ class Atom : protected Pointers {
 
   // EPIDERMIS package
   double **shape;
+  double *alpha;
 
   // MESONT package
 

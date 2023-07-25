@@ -30,6 +30,7 @@ do
        vtk_hdf=$((vtk_hdf+1))
     elif [ $var == "--enable-misc" ]; then continue
     elif [ $var == "--enable-plasmid" ]; then continue
+    elif [ $var == "--enable-epidermis" ]; then continue
     elif [ $var == "--gpu" ]; then continue
     elif [ $var == "--static" ]; then continue
     elif [ $var == "--shared" ]; then continue
@@ -61,6 +62,8 @@ do
     make yes-misc
   elif [ $var == "--enable-plasmid" ]; then
     make yes-plasmid
+  elif [ $var == "--enable-epidermis" ]; then
+    make yes-epidermis
   elif [ $var == "--gpu" ]; then
     make yes-kokkos
   fi

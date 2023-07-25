@@ -13,33 +13,30 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(nufeb/division/basal,FixDivideBasal)
+FixStyle(epidermis/differentiation,FixDifferentiation)
 
 #else
 
-#ifndef LMP_FIX_DIVIDE_STEM_H
-#define LMP_FIX_DIVIDE_STEM_H
+#ifndef LMP_FIX_CELL_DIFFERENTIATION_H
+#define LMP_FIX_CELL_DIFFERENTIATION_H
 
-#include "fix_divide.h"
+#include "fix.h"
 
 namespace LAMMPS_NS {
 
-class FixDivideStem : public FixDivide {
+class FixDifferentiation: public Fix {
  public:
+  FixDifferentiation(class LAMMPS *, int, char **);
+  virtual ~FixDifferentiation();
 
-  FixDivideStem(class LAMMPS *, int, char **);
-  virtual ~FixDivideStem();
-  virtual void compute();
-  
+  int setmask();
+  void biology_nufeb();
+  void compute();
+
  protected:
-  double diameter;
-  double eps_density;
-  int seed;
 
-  void spatial_regulate(int, double*, double*, double, double);
-
-
-  class RanPark *random;
+  double *diffshape;        // per-type list of differentiated cell shape
+  int *diffgroup;
 };
 
 }

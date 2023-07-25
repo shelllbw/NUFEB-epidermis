@@ -13,30 +13,29 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(epidermis/growth/basal,FixGrowthBasal)
+FixStyle(epidermis/growth/diff,FixGrowthDiff)
 
 #else
 
-#ifndef LMP_FIX_GROWTH_BASAL_H
-#define LMP_FIX_GROWTH_BASAL_H
+#ifndef LMP_FIX_GROWTH_DIFF_H
+#define LMP_FIX_GROWTH_DIFF_H
 
 #include "fix_growth.h"
 
 namespace LAMMPS_NS {
 
-class FixGrowthBasal: public FixGrowth {
+class FixGrowthDiff: public FixGrowth {
  public:
-  FixGrowthBasal(class LAMMPS *, int, char **);
-  virtual ~FixGrowthBasal() {}
+  FixGrowthDiff(class LAMMPS *, int, char **);
+  virtual ~FixGrowthDiff() {}
 
   virtual void update_atoms();
   virtual void update_cells();
 
  protected:
-  int isub;
-  double growth;
-  double yield;
-  double sub_affinity;
+  int ical;
+  double deform;         // maximum deformation rate
+  double yield;          // calcium secretion rate
 };
 
 }

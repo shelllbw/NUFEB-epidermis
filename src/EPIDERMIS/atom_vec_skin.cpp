@@ -43,17 +43,14 @@ AtomVecSkin::AtomVecSkin(LAMMPS *lmp) : AtomVec(lmp)
   // order of fields in a string does not matter
   // except: fields_data_atom & fields_data_vel must match data file
 
-  fields_grow = {"shape", "rmass", "biomass"};
-  fields_copy = {"shape", "rmass", "biomass"};
-  fields_comm = {""};
-  fields_comm_vel = {""};
-  fields_reverse = {""};
-  fields_border = {"shape", "rmass", "biomass"};
-  fields_border_vel = {"shape", "rmass", "biomass"};
-  fields_exchange = {"shape", "rmass", "biomass"};
-  fields_restart = {"shape", "rmass", "biomass"};
-  fields_create = {"shape", "rmass", "biomass"};
-  fields_data_atom = {"id", "type", "shape", "rmass", "x"};
+  fields_grow = {"shape", "rmass", "biomass", "alpha"};
+  fields_copy = {"shape", "rmass", "biomass", "alpha"};
+  fields_border = {"shape", "rmass", "biomass", "alpha"};
+  fields_border_vel = {"shape", "rmass", "biomass", "alpha"};
+  fields_exchange = {"shape", "rmass", "biomass", "alpha"};
+  fields_restart = {"shape", "rmass", "biomass", "alpha"};
+  fields_create = {"shape", "rmass", "biomass", "alpha"};
+  fields_data_atom = {"id", "type", "rmass", "x", "shape"};
   fields_data_vel =  {"id", "v"};
 }
 
@@ -115,6 +112,7 @@ void AtomVecSkin::init()
 void AtomVecSkin::grow_pointers()
 {
   shape = atom->shape;
+  alpha = atom->alpha;
   rmass = atom->rmass;
   biomass = atom->biomass;
 }
@@ -128,6 +126,7 @@ void AtomVecSkin::create_atom_post(int ilocal)
   shape[ilocal][0] = shape[ilocal][1] = shape[ilocal][2] = 1e-5;
   rmass[ilocal] = 4.0*MY_PI/3.0 * 1e-5*1e-5*1e-5;
   biomass[ilocal] = 1.0;
+  alpha[ilocal] = 1.0;
 }
 
 /* ----------------------------------------------------------------------
@@ -163,6 +162,7 @@ void AtomVecSkin::pack_data_pre(int ilocal)
   shape_b = shape[ilocal][1];
   shape_c = shape[ilocal][2];
   rmass_one = rmass[ilocal];
+  alpha_one = alpha[ilocal];
 
   shape[ilocal][0] *= 2.0;
   shape[ilocal][1] *= 2.0;
@@ -182,7 +182,5 @@ void AtomVecSkin::pack_data_post(int ilocal)
   shape[ilocal][0] = shape_a;
   shape[ilocal][1] = shape_b;
   shape[ilocal][2] = shape_c;
-
   rmass[ilocal] = rmass_one;
-  biomass[ilocal] = 1.0;
 }

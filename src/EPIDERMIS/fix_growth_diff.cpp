@@ -11,73 +11,81 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <cstdio>
 #include <cstring>
-#include <cmath>
 #include "atom.h"
 #include "error.h"
 
-#include "fix_growth_basal.h"
+#include "fix_growth_diff.h"
 #include "grid.h"
 #include "group.h"
 #include "modify.h"
 #include "grid_masks.h"
-#include "math_const.h"
+#include "update.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
-using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
-FixGrowthBasal::FixGrowthBasal(LAMMPS *lmp, int narg, char **arg) :
+FixGrowthDiff::FixGrowthDiff(LAMMPS *lmp, int narg, char **arg) :
   FixGrowth(lmp, narg, arg)
 {
   if (narg < 4)
-    error->all(FLERR, "Illegal fix epidermis/growth/basal command");
+    error->all(FLERR, "Illegal fix epidermis/growth/diff command");
 
-  isub = -1;
-  growth = 0.0;
+  ical = -1;
+  deform = 0.0;
   yield = 1.0;
-  sub_affinity = 0.0;
 
-  isub = grid->find(arg[3]);
-  if (isub < 0)
+  ical = grid->find(arg[3]);
+  if (ical < 0)
     error->all(FLERR, "Can't find substrate name");
-  sub_affinity = utils::numeric (FLERR,arg[4],true,lmp);
-  if (sub_affinity <= 0)
-    error->all(FLERR, "Growth factor affinity must be greater than zero");
 
-  int iarg = 5;
+  int iarg = 4;
   while (iarg < narg) {
-    if (strcmp(arg[iarg], "growth") == 0) {
-      growth = utils::numeric(FLERR,arg[iarg+1],true,lmp);
+    if (strcmp(arg[iarg], "deform") == 0) {
+      deform = utils::numeric(FLERR,arg[iarg+1],true,lmp);
       iarg += 2;
     } else if (strcmp(arg[iarg], "yield") == 0 ) {
       yield = utils::numeric(FLERR,arg[iarg+1],true,lmp);
       iarg += 2;
     } else {
-      error->all(FLERR, "Illegal fix epidermis/growth/stem command");
+      error->all(FLERR, "Illegal fix epidermis/growth/diff command");
     }
   }
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixGrowthBasal::update_atoms()
+void FixGrowthDiff::update_atoms()
 {
   double **conc = grid->conc;
+  // use growth variable to store specific deformation rate
+  double ***growth = grid->growth;
+  int nlocal = atom->nlocal;
+  double **shape = atom->shape;
+  double *alpha = atom->alpha;
 
-  for (int i = 0; i < grid->ncells; i++) {
-    grid->growth[igroup][i][0] = growth * conc[isub][i] / (sub_affinity + conc[isub][i]);
+  for (int i = 0; i < nlocal; i++) {
+    if (atom->mask[i] & groupbit) {
+      double tmp;
+      int cell = grid->cell(atom->x[i]);
+      // update cell shape based on flattening rate
+      tmp = pow(conc[ical][cell] / (1e-6), 2);
+      alpha[i] = (1 + deform * tmp) / (1 + tmp);
+
+      printf("appha = %e %e \n", alpha[i], conc[ical][cell]);
+      shape[i][0] *= alpha[i];
+      shape[i][1] *= alpha[i];
+      shape[i][2] /= alpha[i] * alpha[i];
+    }
   }
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixGrowthBasal::update_cells ()
+void FixGrowthDiff::update_cells ()
 {
-
   double **reac = grid->reac;
   int nlocal = atom->nlocal;
 
@@ -85,7 +93,7 @@ void FixGrowthBasal::update_cells ()
     if (atom->mask[i] & groupbit) {
       // calcium secretion
       int cell = grid->cell(atom->x[i]);
-      reac[isub][cell] += yield;
+      reac[ical][cell] += yield;
     }
   }
 }

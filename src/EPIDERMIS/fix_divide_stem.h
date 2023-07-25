@@ -13,7 +13,7 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(nufeb/division/basal,FixDivideBasal)
+FixStyle(epidermis/division/stem,FixDivideStem)
 
 #else
 
@@ -32,16 +32,15 @@ class FixDivideStem : public FixDivide {
   virtual void compute();
   
  protected:
-  double diameter;
-  double eps_density;
-  int seed;
+    int type_ta;    // atom type of TA cell
+    int ita;       // list of groups contains TA cells
+    int seed;
 
-  void spatial_regulate(int, double*, double*, double, double);
-
+  void get_location(int, double*, double*, double, double);
 
   class RanPark *random;
+  class FixPropertyCycletime *fix_ct;
 };
-
 }
 
 #endif
