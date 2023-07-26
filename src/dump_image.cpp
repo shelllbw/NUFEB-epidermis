@@ -840,28 +840,28 @@ void DumpImage::create_image()
           image->draw_cylinder(xp1,xp2,color,diameter,3);
         }
       } else{
-	auto fixlist = modify->get_fix_by_style("^nufeb/property/plasmid");
-    if (fixlist.size() != 1)
-      error->all(FLERR, "There must be exactly one fix nufeb/property/plasmid defined for fix pour");
-#ifdef LMP_USER_PLASMID
-    auto fix = dynamic_cast<FixPropertyPlasmid *>(fixlist.front());
+        auto fixlist = modify->get_fix_by_style("^nufeb/property/plasmid");
+        if (fixlist.size() != 1)
+          error->all(FLERR, "There must be exactly one fix nufeb/property/plasmid defined for fix pour");
+        #ifdef LMP_USER_PLASMID
+            auto fix = dynamic_cast<FixPropertyPlasmid *>(fixlist.front());
 
-	double plm_x[3];
-	plm_x[0] = plm_x[1] = plm_x[2] = 0.0;
-	for (int k = 0; k < (int)fix->vprop[i]; k++) {
-	  fix->get_plasmid_coords(i,k,plm_x);
-	  image->draw_sphere(plm_x,image->color2rgb("green"),fix->plm_dia);
-	}
-	double xfilament1[3];
-	double xfilament2[3];
-	for (int k = 0; k < fix->nfilas[i]; k++) {
-	  int p1 = fix->fila[i][k][0];
-	  int p2 = fix->fila[i][k][1];
-	  fix->get_plasmid_coords(i,p1,xfilament1);
-	  fix->get_plasmid_coords(i,p2,xfilament2);
-	  image->draw_cylinder(xfilament1,xfilament2,image->color2rgb("red"),5e-8,0);
-	}
-#endif
+            double plm_x[3];
+            plm_x[0] = plm_x[1] = plm_x[2] = 0.0;
+            for (int k = 0; k < (int)fix->vprop[i]; k++) {
+              fix->get_plasmid_coords(i,k,plm_x);
+              image->draw_sphere(plm_x,image->color2rgb("green"),fix->plm_dia);
+            }
+            double xfilament1[3];
+            double xfilament2[3];
+            for (int k = 0; k < fix->nfilas[i]; k++) {
+              int p1 = fix->fila[i][k][0];
+              int p2 = fix->fila[i][k][1];
+              fix->get_plasmid_coords(i,p1,xfilament1);
+              fix->get_plasmid_coords(i,p2,xfilament2);
+              image->draw_cylinder(xfilament1,xfilament2,image->color2rgb("red"),5e-8,0);
+            }
+        #endif
       }
     }
   }
