@@ -11,7 +11,7 @@
  See the README file in the top-level LAMMPS directory.
  ------------------------------------------------------------------------- */
 
-#include "fix_divide_stem.h"
+#include "fix_divide_ta.h"
 
 #include "math_const.h"
 #include "atom.h"
@@ -28,53 +28,31 @@
 using namespace LAMMPS_NS;
 using namespace MathConst;
 
-#define DELTA 0.1
+#define DELTA 0.01
 
 /* ---------------------------------------------------------------------- */
 
-FixDivideStem::FixDivideStem(LAMMPS *lmp, int narg, char **arg) :
+FixDivideTA::FixDivideTA(LAMMPS *lmp, int narg, char **arg) :
   FixDivide(lmp, narg, arg)
 {
   if (!atom->skin_flag)
-    error->all(FLERR, "fix epidermis/division/stem requires skin atom style");
+    error->all(FLERR, "fix skin/division/ta requires skin atom style");
 
-  if (narg < 6)
-    error->all(FLERR, "Illegal fix epidermis/division/stem command");
+  if (narg < 4)
+    error->all(FLERR, "Illegal fix skin/division/ta command");
 
-  type_ta = utils::inumeric(FLERR,arg[3],true,lmp);
-  mask_ta = group->find(arg[4]);
-
-  if (mask_ta < 0)
-    error->all(FLERR, "Can't find TA group in fix epidermis/division/stem command");
-  mask_ta = 1 | group->bitmask[mask_ta];
-
-  seed = utils::inumeric(FLERR,arg[5],true,lmp);
+  seed = utils::inumeric(FLERR,arg[3],true,lmp);
 
   // Random number generator, same for all procs
   random = new RanPark(lmp, seed);
 
   group_id = new char[strlen(arg[1])+1];
   strcpy(group_id, arg[1]);
-
-  int iarg = 6;
-  while (iarg < narg) {
-    if (strcmp(arg[iarg], "pa") == 0) {
-      pa1 = utils::numeric(FLERR,arg[iarg+1],true,lmp);
-      pa2 = utils::numeric(FLERR,arg[iarg+2],true,lmp);
-      iarg += 3;
-    } else if (strcmp(arg[iarg], "pb") == 0 ) {
-      pb1 = utils::numeric(FLERR,arg[iarg+1],true,lmp);
-      pb2 = utils::numeric(FLERR,arg[iarg+2],true,lmp);
-      iarg += 3;
-    } else {
-      error->all(FLERR, "Illegal fix epidermis/growth/diff command");
-    }
-  }
 }
 
 /* ---------------------------------------------------------------------- */
 
-FixDivideStem::~FixDivideStem()
+FixDivideTA::~FixDivideTA()
 {
   delete random;
   delete [] group_id;
@@ -84,11 +62,11 @@ FixDivideStem::~FixDivideStem()
    initialization before run
 ------------------------------------------------------------------------- */
 
-void FixDivideStem::init()
+void FixDivideTA::init()
 {
   // create fix nufeb/property/cycletime
   char **fixarg = new char*[3];
-  fixarg[0] = (char *)"div_sc_ct";
+  fixarg[0] = (char *)"div_ta_ct";
   fixarg[1] = group_id;
   fixarg[2] = (char *)"nufeb/property/cycletime";
 
@@ -99,68 +77,36 @@ void FixDivideStem::init()
 
 /* ---------------------------------------------------------------------- */
 
-void FixDivideStem::compute()
+void FixDivideTA::compute()
 {
   double **x = atom->x;
   int nlocal = atom->nlocal;
   double **conc = grid->conc;
 
-  int itype, jtype;
-  int imask, jmask;
-
   for (int i = 0; i < nlocal; i++) {
-
     if (atom->mask[i] & groupbit) {
       const int cell =grid->cell(x[i]);
       double growth = grid->growth[igroup][cell][0];
       double div_time = log(2) / growth;
-      //printf("SC %i = i %e %e\n", i, fix_ct->aprop[i][0], growth );
+// printf("TA %i = i %e %e\n", i, fix_ct->aprop[i][0], growth );
       // trigger cell division if current cell cycle time
       // is greater than calculated doubling time
       if (fix_ct->aprop[i][0] > div_time) {
-        int cell = grid->cell(atom->x[i]);
-        double prob = random->uniform();
 
-        // apply hill function later
-        double pa = pa1 + pa2;
-        double pb = pb1 + pb2;
-
-        if (prob < pa) {
-          // symmetric divide into two TA cells
-          itype = type_ta;
-          imask = mask_ta;
-          jtype = type_ta;
-          jmask = mask_ta;
-        } else if (prob < 1-pb) {
-          // self renewal
-          itype = atom->type[i];
-          imask = atom->mask[i];
-          jtype = atom->type[i];
-          jmask = atom->mask[i];
-        } else {
-          itype = atom->type[i];
-          imask = atom->mask[i];
-          jtype = type_ta;
-          jmask = mask_ta;
-        }
-
+        // attributes of the two daughter cells are identical to parent cell
         double theta = random->uniform() * 2 * MY_PI;
         double phi = random->uniform() * (MY_PI);
 
-        // attributes of the two daughter cells are identical to parent cell
-        // update daughter cell i
         double oldx = atom->x[i][0];
         double oldy = atom->x[i][1];
         double oldz = atom->x[i][2];
 
+        // update daughter cell i
         double newx = oldx + (atom->shape[i][0] * cos(theta) * sin(phi) * DELTA);
         double newy = oldy + (atom->shape[i][1] * sin(theta) * sin(phi) * DELTA);
 
         atom->x[i][0] = newx;
         atom->x[i][1] = newy;
-
-        atom->type[i] = itype;
-        atom->mask[i] = imask;
 
         // create daughter cell j
 
@@ -172,11 +118,11 @@ void FixDivideStem::compute()
         coord[1] = newy;
         coord[2] = atom->x[i][2];
 
-        atom->avec->create_atom(jtype, coord);
+        atom->avec->create_atom(atom->type[i], coord);
         int j = atom->nlocal - 1;
 
         atom->tag[j] = 0;
-        atom->mask[j] = jmask;
+        atom->mask[j] = atom->mask[i];
         atom->v[j][0] = atom->v[i][0];
         atom->v[j][1] = atom->v[i][1];
         atom->v[j][2] = atom->v[i][2];
@@ -190,6 +136,7 @@ void FixDivideStem::compute()
         atom->shape[j][2] = atom->shape[i][2];
         atom->rmass[j] = atom->rmass[i];
         atom->biomass[j] = atom->biomass[i];
+
 
         modify->create_attribute(j);
 

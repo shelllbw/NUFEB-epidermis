@@ -68,6 +68,7 @@ void FixPropertyGeneration::set_arrays(int j)
 void FixPropertyGeneration::update_arrays(int i, int j)
 {
   vprop[j] = vprop[i] + 1;
+  vprop[i] = vprop[i] + 1;
 }
 
 

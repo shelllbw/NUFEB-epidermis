@@ -13,32 +13,32 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(skin/growth/basal,FixGrowthBasal)
+FixStyle(skin/division/ta,FixDivideTA)
 
 #else
 
-#ifndef LMP_FIX_GROWTH_BASAL_H
-#define LMP_FIX_GROWTH_BASAL_H
+#ifndef LMP_FIX_DIVIDE_TA_H
+#define LMP_FIX_DIVIDE_TA_H
 
-#include "fix_growth.h"
+#include "fix_divide.h"
 
 namespace LAMMPS_NS {
 
-class FixGrowthBasal: public FixGrowth {
+class FixDivideTA : public FixDivide {
  public:
-  FixGrowthBasal(class LAMMPS *, int, char **);
-  virtual ~FixGrowthBasal() {}
 
-  virtual void update_atoms();
-  virtual void update_cells();
-
+  FixDivideTA(class LAMMPS *, int, char **);
+  virtual ~FixDivideTA();
+  virtual void compute();
+  virtual void init();
+  
  protected:
-  int isub;
-  double growth;
-  double yield;
-  double sub_affinity;
-};
+  int seed;
+  char *group_id;
 
+  class RanPark *random;
+  class FixPropertyCycletime *fix_ct;
+};
 }
 
 #endif

@@ -6,7 +6,8 @@
 #-----------------------------System Settings--------------------------------#
 
 units si                                    # using si units (m, s, kg)
-atom_style      coccus                      # using nufeb coccus atom style
+
+atom_style      skin                      # using nufeb coccus atom style
 atom_modify     map array sort 10 0         # map array - find atoms using indices
 		                            # sort 10 5.0e-6: sort every 10
 
@@ -21,100 +22,124 @@ processors      * * 1                       # processor grid
 
 comm_modify     vel yes                     # communicate velocities for ghost atoms
 
-region simu_domain block 0 2.5e-4 0 2e-4 0 3.2e-4 units box
+region simu_domain block 0 5e-4 0 1e-4 0 2.5e-4 units box
 
-create_box 1 simu_domain                    # create simulation domain
+create_box 6 simu_domain                    # create simulation domain
 
 
 #------------------------Cells and Functional Groups-------------------------#
 
-group           BASE  type 1               # assign type 1 atoms to BASE group
+variable x equal 60
+variable y equal 40
+variable z equal 32
 
-variable x equal 20
-variable y equal 16
-variable z equal 16
-
-lattice sc 1.25e-5 origin 0.5 0.5 0.5
-
-region reg block 0 $x 0 $y 0 $z
-region reg2 block 0 $x 0 $y 0 1
-region reg4 block 0 $x 0 $y 0 17
+lattice sc 0.5e-5 origin 0.5 0.5 0.5
+region reg block 0 EDGE 0 EDGE 0 $z
 
 variable  xx internal 0.0
 variable  yy internal 0.0
 variable  zz internal 0.0
 
-variable  v equal "(0.12*v_z*zlat * cos(v_xx/xlat * 1.9*PI*PI/v_x) * cos(v_yy/ylat * 0.64 *PI*PI/v_y) + 0.9*v_z*zlat - v_zz  ) > 0.0"
+variable sine equal "0.12*v_z*zlat * cos(v_xx/xlat * 1.9*PI*PI/v_x) * cos(v_yy/ylat * 0.64*PI*PI/v_y)"
+
+# create BASE cells
+variable bm_sin equal "v_sine + 0.9*v_z*zlat - v_zz"
+variable v_bm equal "v_bm_sin > 0.0"
+
+create_atoms 1 region reg var v_bm set x xx set y yy set z zz
+
+# craete initial STEM cells
+variable stem_sine1 equal "v_sine + 0.96*v_z*zlat - v_zz"
+variable stem_sine2 equal "v_sine + 0.98*v_z*zlat - v_zz"
+variable v_stem equal "(v_stem_sine2 > 0.0) && (v_stem_sine1 < 0.0)" 
+
+create_atoms 2 random 200 2024 reg var v_stem set x xx set y yy set z zz    
+
+set type 1 shape 1e-5 1e-5 1e-5
+set type 1 density 4000
+
+set type 2 shape 1e-5 1e-5 1.5e-5
+set type 2 density 150
+
+
+group           BASE  type 1               # assign type 1 atoms to BASE group
+group           STEM  type 2               # assign type 1 atoms to STEM group
+group           TA    type 3               # assign type 1 atoms to TA group
+group           SPIN   type 4              # assign type 1 atoms to SPIN group
+group           GRAN   type 5              # assign type 1 atoms to GRAN group
+group           CORN   type 6              # assign type 1 atoms to CORN group
+
+group           CELL  type 2 3 4 5 6       # assign type 2-6 atoms to CELL group
 
 neighbor       5e-6 bin                   # setting neighbour skin distance and style
 
-
-create_atoms 1 region reg var v set x xx set y yy set z zz
-
-
-set type 1 density 4000
-
-
-neigh_modify    check yes                  # rebuild neighbour list if any atom
-                                           # had moved more than half the skin distance
-
+neigh_modify    check yes exclude type 1 1    # rebuild neighbour list if any atom
+                                                # had moved more than half the skin distance
 
 #--------------------------Mesh Grid and Substrates--------------------------#
 
 # defining grid sytle, substrate names, and grid size
-grid_style      nufeb/chemostat 1 gf 1e-5
+grid_style      nufeb/chemostat 2 gf ca 1e-5
 
 # set diffusion boundary conditions and initial concentrations (liquid:kg/m3)
-grid_modify     set gf  pp pp dd 0
+grid_modify     set gf  pp pp dd 1e-4
+grid_modify     set ca  pp pp dd 1e-20
 
 
 #--------------------------Biological Processes-------------------------------#
 
+fix p_cycle all nufeb/property/cycletime
 
+fix g_sc STEM skin/growth/basal gf 1e-10 growth 0.000001284
+fix g_ta TA skin/growth/basal gf 1e-10 growth 0.00000321
+
+#pa = TA+TA pb = TA+SC pc=SC+SC
+fix div_sc STEM skin/division/stem 3 TA 2023 pa 0.1 0.0 pb 0.7 0.0
+
+fix div_ta TA skin/division/ta 2023
+#fix diff_ta TA skin/differentiation/ta 4 SPIN 1064000 0 2023
 
 #---------------------------Physical Processes--------------------------------#
 
-pair_style  gran/hooke/history 1e-4 NULL 1e-5 NULL 0.0 0    # pairwise interaction
-pair_coeff  * *                                             # between atoms
+pair_style skin 2e-5
+pair_coeff 2* 2* 2.5
+pair_coeff 1 * 20
 
-# pairwise interaction between z-wall and atoms
-fix wall all wall/gran hooke/history 1e-3 NULL 1e-4 NULL 0 0 zplane 0.0 1e-04
+fix nve all nve/limit 1e-6 
+fix vis all viscous 1.5e-12
 
-fix vis all viscous 1e-5                                    # viscous damping force
+fix adh STEM skin/adhesion 7 5e-6
+fix_modify adh af * * 1e-15
+fix_modify adh af 1 2 8e-15
+fix_modify adh af 1 3 4e-15
 
-fix nve all nve/limit 1e-7                                  # NVE integration with 
-                                                            # maximum distance limit       
-
+fix sf_base BASE setforce 0.0 0.0 0.0
 
 #---------------------------Chemical Processes---------------------------------#
 
-fix diff_sub all nufeb/diffusion_reaction gf  1.6e-9        # diffusion reaction for updating
-                                                            # distribusion of substrate concentration
 
 
 #--------------------------Computations and Outputs----------------------------#
 
-variable nbase equal "count(BASE)"                            # total # of HET
+variable nstem equal "count(STEM)"                        # total # of STEM
+variable nta equal "count(TA)"                            # total # of TA
+variable nspin equal "count(SPIN)"                            # total # of SPIN
 
+compute         p0 all property/atom shapex shapey shapez
 
-shell mkdir vtk                                            # dump vtk files to /vtk folder
-dump du1 all vtk 1 vtk/dump*.vtu id type diameter x y z     # require build NUFEB with vtk option
-dump du2 all grid/vtk 1 vtk/dump_%_*.vti con rea den gro
+dump           d0 all custom 1 dump.skin id type x y z  c_p0[1] c_p0[2] c_p0[3]          
+dump_modify    d0 colname c_p0[1] shapex colname c_p0[2] shapey colname c_p0[3] shapez 
 
-
-dump du3 all image 1 a*.png type diameter size 1280 720 view 80 60        # dump image
-dump_modify du3 acolor 1 blue 
-
-
-thermo_style custom step cpu atoms v_nbase                    # screen and log outputs
-thermo 1
+thermo_style custom step cpu atoms v_nstem v_nta v_nspin                 # screen and log outputs
+thermo 1 
+thermo_modify lost warn
 
 #-----------------------------------Run----------------------------------------#
 
 # issue run command, define timesteps for physical (pairdt) and chemical (diffdt) processes
-run_style nufeb diffdt 1e-4 difftol 1e-6 pairdt 1e-2 pairtol 1 pairmax 100 diffmax 1000
+run_style nufeb diffdt 1e-4 difftol 1e-6 pairdt 60 pairtol 1e-20 pairmax 100 diffmax 1000
 
-timestep 3600                                            # define biological timesteps (1000s)
+timestep 36000                                            # define biological timesteps (1000s)
 
-run 1                                                    # growing biofilm for 900x1000s
+run 200                                                    # growing biofilm for 900x1000s
 

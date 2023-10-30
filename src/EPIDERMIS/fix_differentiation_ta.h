@@ -13,30 +13,38 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(skin/growth/basal,FixGrowthBasal)
+FixStyle(skin/differentiation/ta,FixDifferentiationTA)
 
 #else
 
-#ifndef LMP_FIX_GROWTH_BASAL_H
-#define LMP_FIX_GROWTH_BASAL_H
+#ifndef LMP_FIX_CELL_DIFFERENTIATION_TA_H
+#define LMP_FIX_CELL_DIFFERENTIATION_TA_H
 
-#include "fix_growth.h"
+#include "fix.h"
 
 namespace LAMMPS_NS {
 
-class FixGrowthBasal: public FixGrowth {
+class FixDifferentiationTA: public Fix {
  public:
-  FixGrowthBasal(class LAMMPS *, int, char **);
-  virtual ~FixGrowthBasal() {}
+  FixDifferentiationTA(class LAMMPS *, int, char **);
+  virtual ~FixDifferentiationTA();
 
-  virtual void update_atoms();
-  virtual void update_cells();
+  virtual void init();
+  int setmask();
+  void biology_nufeb();
+  void compute();
 
  protected:
-  int isub;
-  double growth;
-  double yield;
-  double sub_affinity;
+  double ave_time, sd;     // average differentiation time with sd
+
+  int type_spin;    // atom type of spinous cell
+  int mask_spin;    // Spinous group mask
+  int seed;
+  char *group_id;
+
+  class RanPark *random;
+  class FixPropertyCycletime *fix_ct;
+  class FixPropertyGeneration *fix_gen;
 };
 
 }

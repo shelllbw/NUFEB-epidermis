@@ -1,0 +1,96 @@
+#-----------------------------------------------------------------------------#
+#                NUFEB Simulation: Heterotrophic Biofilm Growth               #
+#-----------------------------------------------------------------------------#
+
+
+#-----------------------------System Settings---------------------------------#
+
+units si                                    # using si units (m, s, kg)
+atom_style      skin                	      # using epidermis atom style
+atom_modify     map array sort 10 0         # map array - find atoms using indices
+		                             # sort every 10
+
+boundary        ff ff ff                    # periodic boundaries in x and y
+                                            # fixed boundary in z
+
+newton          off                         # forces between local and ghost
+                                            # atoms are computed in each
+					     # processor without communication
+					     
+processors      * * 1                       # processor grid
+
+comm_modify     vel yes                     # communicate velocities for ghost atoms
+
+read_data       atom.in	             # read atom.in file which defines domain size
+                                            # and initial atoms	
+
+
+#--------------------Microbes and Functional Groups-------------------------#
+
+group           STEM   type 1               # assign type 1 atoms to STEM group
+group           TA     type 2               # assign type 1 atoms to TA group
+group           SPIN   type 3               # assign type 1 atoms to SPIN group
+group           GRAN   type 4               # assign type 1 atoms to GRAN group
+group           CORN   type 5               # assign type 1 atoms to CORN group
+
+group           BASAL union STEM TA
+group           DIFF  union SPIN GRAN
+
+neighbor        0.0 bin                   # setting neighbour skin distance and style
+
+neigh_modify    check yes                  # rebuild neighbour list if any atom
+
+
+#--------------------------Mesh Grid and Substrates--------------------------#
+
+# defining grid sytle, substrate names, and grid size
+grid_style      nufeb/chemostat 2 gf ca 1e-5
+
+# set diffusion boundary conditions and initial concentrations (liquid:kg/m3)
+grid_modify     set gf  pp pp dd 0.0
+grid_modify     set ca  pp pp dd 1e-20
+
+
+#--------------------------Biological Processes-------------------------------#
+
+#fix g_spin SPIN skin/growth/diff ca deform 1.01 yield 5e-3
+#fix g_gran GRAN skin/growth/diff ca deform 1.01 yield 1e-2
+
+#fix d_diff all skin/differentiation adiff SPIN 3 0.8e-5 adiff GRAN 4 0.4e-5 adiff CORN 5 0.1e-5 	
+
+
+#---------------------------Chemical Processes---------------------------------#
+
+fix diff_ca all nufeb/diffusion_reaction ca 1e-7            # diffusion reaction for updating
+                                                            # distribusion of calcium concentration
+                                                            
+                                                            
+#---------------------------Physical Processes--------------------------------#
+
+pair_style skin 2e-5
+pair_coeff * * 1000
+
+fix nve all nve/limit 1e-6 
+fix vis all viscous 1e-12 
+
+#--------------------------Computations and Outputs----------------------------#
+compute         p0 all property/atom shapex shapey shapez
+
+dump           d0 all custom 1 dump.ellipsoid.equil id type x y z  c_p0[1] c_p0[2] c_p0[3]          
+dump_modify    d0 colname c_p0[1] shapex colname c_p0[2] shapey colname c_p0[3] shapez 
+     
+shell mkdir vtk                                            # dump vtk files to /vtk folder
+dump du1 all vtk 1 vtk/dump*.vtu id type c_p0[3]                    # require build NUFEB with vtk option
+
+thermo_style custom step cpu atoms    # screen and log outputs
+thermo 1
+
+#-----------------------------------Run----------------------------------------#
+
+# issue run command, define timesteps for physical (pairdt) and chemical (diffdt) processes
+run_style nufeb diffdt 1e-4 difftol 1e-6 pairdt 1e-2 pairtol 0 pairmax 10 diffmax 5000
+
+timestep 100                                              # define biological timesteps (1000s)
+
+run 100                                                    # growing biofilm for 900x1000s
+

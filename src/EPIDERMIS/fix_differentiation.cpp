@@ -15,6 +15,7 @@
 #include "atom.h"
 #include "error.h"
 #include "group.h"
+#include "grid.h"
 #include "memory.h"
 #include "modify.h"
 #include "update.h"
@@ -31,10 +32,20 @@ FixDifferentiation::FixDifferentiation(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR, "fix epidermis/differentiation requires skin atom style");
 
   if (narg < 3)
-    error->all(FLERR, "Illegal fix epidermis/differentiation command");
+    error->all(FLERR,  "Illegal fix epidermis/differentiation command");
 
   diffshape = nullptr;
   diffgroup = nullptr;
+  ical = -1;
+  rdiff = 0.0;
+
+  ical = grid->find(arg[3]);
+  if (ical < 0)
+    error->all(FLERR, "Can't find substrate name");
+
+  rdiff = utils::numeric(FLERR,arg[4],true,lmp);
+  if (rdiff < 0)
+    error->all(FLERR,  "Illegal fix epidermis/differentiation command");
 
   memory->grow(diffshape,atom->ntypes+1,"fix epidermis/differentiation:diffshape");
   memory->grow(diffgroup,atom->ntypes+1,"fix epidermis/differentiation:diffgroup");
@@ -43,7 +54,7 @@ FixDifferentiation::FixDifferentiation(LAMMPS *lmp, int narg, char **arg) :
     diffshape[i] = MAXFLOAT;
   }
 
-  int iarg = 3;
+  int iarg = 5;
   while (iarg < narg) {
     if (strcmp(arg[iarg], "adiff") == 0) {
       int igroup = group->find(arg[iarg+1]);
@@ -94,11 +105,24 @@ void FixDifferentiation::compute()
   int ntypes = atom->ntypes;
   int *mask = atom->mask;
 
+  double **conc = grid->conc;
+  double *alpha = atom->alpha;
   double **shape = atom->shape;
   int *type = atom->type;
 
   for (int i = 0; i < nlocal; i++) {
     if (atom->mask[i] & groupbit) {
+      double tmp;
+      int cell = grid->cell(atom->x[i]);
+      // update cell shape based on flattening rate
+      tmp = pow(conc[ical][cell] / (1e-6), 2);
+      alpha[i] = (1 + rdiff * tmp) / (1 + tmp);
+
+      printf("appha = %e %e \n", alpha[i], conc[ical][cell]);
+      shape[i][0] *= alpha[i];
+      shape[i][1] *= alpha[i];
+      shape[i][2] /= alpha[i] * alpha[i];
+
       // reassign atom type based on shapez criterion
       for (int j = 1; j <= ntypes; j++) {
         if (shape[i][2] < diffshape[j]) {
@@ -106,7 +130,6 @@ void FixDifferentiation::compute()
           mask[i] = diffgroup[j];
         }
       }
-      printf("type[i] = %i \n", type[i]);
     }
   }
 }

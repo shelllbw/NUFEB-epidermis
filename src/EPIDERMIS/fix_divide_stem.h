@@ -13,7 +13,7 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(epidermis/division/stem,FixDivideStem)
+FixStyle(skin/division/stem,FixDivideStem)
 
 #else
 
@@ -30,13 +30,15 @@ class FixDivideStem : public FixDivide {
   FixDivideStem(class LAMMPS *, int, char **);
   virtual ~FixDivideStem();
   virtual void compute();
+  virtual void init();
   
  protected:
-    int type_ta;    // atom type of TA cell
-    int ita;       // list of groups contains TA cells
-    int seed;
+  int type_ta;    // atom type of TA cell
+  int mask_ta;    // TA group mask
+  int seed;
+  char *group_id;
 
-  void get_location(int, double*, double*, double, double);
+  double pa1, pa2, pb1, pb2;
 
   class RanPark *random;
   class FixPropertyCycletime *fix_ct;

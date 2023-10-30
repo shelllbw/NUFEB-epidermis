@@ -28,13 +28,11 @@ using namespace FixConst;
 /* ---------------------------------------------------------------------- */
 
 FixGrowthDiff::FixGrowthDiff(LAMMPS *lmp, int narg, char **arg) :
-  FixGrowth(lmp, narg, arg)
-{
+  FixGrowth(lmp, narg, arg) {
   if (narg < 4)
     error->all(FLERR, "Illegal fix epidermis/growth/diff command");
 
   ical = -1;
-  deform = 0.0;
   yield = 1.0;
 
   ical = grid->find(arg[3]);
@@ -43,41 +41,11 @@ FixGrowthDiff::FixGrowthDiff(LAMMPS *lmp, int narg, char **arg) :
 
   int iarg = 4;
   while (iarg < narg) {
-    if (strcmp(arg[iarg], "deform") == 0) {
-      deform = utils::numeric(FLERR,arg[iarg+1],true,lmp);
-      iarg += 2;
-    } else if (strcmp(arg[iarg], "yield") == 0 ) {
-      yield = utils::numeric(FLERR,arg[iarg+1],true,lmp);
+    if (strcmp(arg[iarg], "yield") == 0) {
+      yield = utils::numeric(FLERR, arg[iarg + 1], true, lmp);
       iarg += 2;
     } else {
       error->all(FLERR, "Illegal fix epidermis/growth/diff command");
-    }
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixGrowthDiff::update_atoms()
-{
-  double **conc = grid->conc;
-  // use growth variable to store specific deformation rate
-  double ***growth = grid->growth;
-  int nlocal = atom->nlocal;
-  double **shape = atom->shape;
-  double *alpha = atom->alpha;
-
-  for (int i = 0; i < nlocal; i++) {
-    if (atom->mask[i] & groupbit) {
-      double tmp;
-      int cell = grid->cell(atom->x[i]);
-      // update cell shape based on flattening rate
-      tmp = pow(conc[ical][cell] / (1e-6), 2);
-      alpha[i] = (1 + deform * tmp) / (1 + tmp);
-
-      printf("appha = %e %e \n", alpha[i], conc[ical][cell]);
-      shape[i][0] *= alpha[i];
-      shape[i][1] *= alpha[i];
-      shape[i][2] /= alpha[i] * alpha[i];
     }
   }
 }

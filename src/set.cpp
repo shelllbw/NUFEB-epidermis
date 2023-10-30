@@ -219,7 +219,7 @@ void Set::command(int narg, char **arg)
       else yvalue = utils::numeric(FLERR,arg[iarg+2],false,lmp);
       if (utils::strmatch(arg[iarg+3],"^v_")) varparse(arg[iarg+3],3);
       else zvalue = utils::numeric(FLERR,arg[iarg+3],false,lmp);
-      if (!atom->ellipsoid_flag)
+      if (!atom->ellipsoid_flag && !atom->skin_flag)
         error->all(FLERR,"Cannot set this attribute for this atom style");
       set(SHAPE);
       iarg += 4;
@@ -968,6 +968,13 @@ void Set::set(int keyword)
     // set shape of ellipsoidal particle
 
     else if (keyword == SHAPE) {
+      // NUFEB specific
+      if (atom->skin_flag){
+        atom->shape[i][0] = 0.5 * xvalue;
+        atom->shape[i][1] = 0.5 * yvalue;
+        atom->shape[i][2] = 0.5 * zvalue;
+        continue;
+      }
       if (xvalue < 0.0 || yvalue < 0.0 || zvalue < 0.0)
         error->one(FLERR,"Invalid shape in set command");
       if (xvalue > 0.0 || yvalue > 0.0 || zvalue > 0.0) {
@@ -1037,6 +1044,10 @@ void Set::set(int keyword)
         double r = atom->radius[i];
         atom->rmass[i] = dvalue * (4.0*MY_PI/3.0*r*r*r +
             MY_PI*r*r*avec_bacillus->bonus[atom->bacillus[i]].length);
+      }
+      if (atom->skin_flag) {
+        atom->rmass[i] = 4.0 * MY_PI / 3.0 *
+            atom->shape[i][0] * atom->shape[i][1] * atom->shape[i][0] * dvalue;
       }
     }
 
@@ -1216,7 +1227,7 @@ void Set::set(int keyword)
 
   // update bonus data numbers
 
-  if (keyword == SHAPE) {
+  if (keyword == SHAPE && !atom->skin_flag) {
     bigint nlocal_bonus = avec_ellipsoid->nlocal_bonus;
     MPI_Allreduce(&nlocal_bonus,&atom->nellipsoids,1,
                   MPI_LMP_BIGINT,MPI_SUM,world);

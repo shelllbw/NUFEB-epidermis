@@ -13,7 +13,7 @@
 
 #ifdef ATOM_CLASS
 // clang-format off
-AtomStyle(epidermis,AtomVecSkin);
+AtomStyle(skin,AtomVecSkin);
 // clang-format on
 #else
 

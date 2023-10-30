@@ -78,7 +78,7 @@ void FixPropertyCycletime::biology_nufeb()
 void FixPropertyCycletime::set_arrays(int j)
 {
   aprop[j][0] = 0.0;
-  aprop[j][1] = 0.0;
+  aprop[j][1] = aprop[j][0];
 }
 
 /* ----------------------------------------------------------------------

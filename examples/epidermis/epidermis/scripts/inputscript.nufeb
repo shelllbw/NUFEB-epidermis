@@ -52,7 +52,7 @@ variable v_iprolif equal "(v_sine3 > 0.0) && (v_sine2 < 0.0)"
 
 
 create_atoms 2 random 400 1234 reg var v_iprolif set x xx set y yy set z zz    
-create_atoms 3 random 2000 2345 reg var v_iprolif set x xx set y yy set z zz   
+#create_atoms 3 random 2000 2345 reg var v_iprolif set x xx set y yy set z zz   
 
 variable z1 equal 35
 region reg_diff block 0 EDGE 0 EDGE 0 $z1
@@ -61,7 +61,7 @@ variable sine4 equal "0.12*v_z1*zlat * cos(v_xx/xlat * 1.9*PI*PI/v_x) * cos(v_yy
 
 variable v_idiff equal "(v_sine4 > 0.0) && (v_sine3 < 0.0)" 
 
-create_atoms 4 random 5000 2345 reg_diff var v_idiff set x xx set y yy set z zz   
+#create_atoms 4 random 5000 2345 reg_diff var v_idiff set x xx set y yy set z zz   
 
 set type 1 diameter 1.2e-5
 set type 1 density 4000

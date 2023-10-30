@@ -13,7 +13,7 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(epidermis/growth/diff,FixGrowthDiff)
+FixStyle(skin/growth/diff,FixGrowthDiff)
 
 #else
 
@@ -29,12 +29,11 @@ class FixGrowthDiff: public FixGrowth {
   FixGrowthDiff(class LAMMPS *, int, char **);
   virtual ~FixGrowthDiff() {}
 
-  virtual void update_atoms();
+  virtual void update_atoms() {};
   virtual void update_cells();
 
  protected:
   int ical;
-  double deform;         // maximum deformation rate
   double yield;          // calcium secretion rate
 };
 
