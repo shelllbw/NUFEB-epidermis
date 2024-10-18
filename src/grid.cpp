@@ -95,7 +95,7 @@ Grid::~Grid()
 void Grid::modify_params(int narg, char **arg)
 {
   if (strcmp(arg[0], "set") == 0) {
-    lmp->init();
+    grid->init();
     grid->setup();
     gvec->set(narg, arg);
   }

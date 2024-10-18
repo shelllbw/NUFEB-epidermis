@@ -29,8 +29,10 @@ class FixDivideTA : public FixDivide {
 
   FixDivideTA(class LAMMPS *, int, char **);
   virtual ~FixDivideTA();
-  virtual void compute();
+
   virtual void init();
+  void post_constructor();
+  virtual void compute();
   
  protected:
   int seed;

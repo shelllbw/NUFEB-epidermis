@@ -30,13 +30,13 @@ class FixGrowthBasal: public FixGrowth {
   virtual ~FixGrowthBasal() {}
 
   virtual void update_atoms();
-  virtual void update_cells();
+  virtual void update_cells(){};
 
  protected:
-  int isub;
+  int isub, icyto;
   double growth;
-  double yield;
-  double sub_affinity;
+  double yield, decay;
+  double cyto_affinity;
 };
 
 }

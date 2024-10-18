@@ -23,6 +23,7 @@
 #include "neighbor.h"
 #include "group.h"
 #include "memory.h"
+#include "modify.h"
 #include "pair.h"
 #include <math.h>
 
@@ -34,7 +35,7 @@ using namespace FixConst;
 FixAdhesionSkin::FixAdhesionSkin(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg)
 {
-  if (narg < 5)
+  if (narg < 4)
     error->all(FLERR, "Illegal fix skin/adhesion command");
 
   virial_global_flag = 1;
@@ -44,6 +45,7 @@ FixAdhesionSkin::FixAdhesionSkin(LAMMPS *lmp, int narg, char **arg) :
 
   zeta = utils::numeric(FLERR,arg[3],true,lmp);
   r = utils::numeric(FLERR,arg[4],true,lmp);
+
   if (zeta <= 0)
     error->all(FLERR, "Illegal fix skin/adhesion command: zeta must be great than zero");
 }
@@ -142,7 +144,6 @@ void FixAdhesionSkin::compute()
   int nlocal = atom->nlocal;
   int *type = atom->type;
   double **x = atom->x;
-  double *radius = atom->radius;
   double **f = atom->f;
   double **shape = atom->shape;
   int newton_pair = force->newton_pair;
@@ -190,9 +191,10 @@ void FixAdhesionSkin::compute()
 
       double c1 = 1/ sqrt(2*zeta);
       double c2 = c1* exp(-0.5);
-      double afij = af[itype][jtype];
 
-      double ccel = -afij*((rij + c1)*exp(-zeta*(rij+c1)*(rij+c1)) - c2*exp(-zeta*rij*rij));
+      double afij = af[itype][jtype];
+      double ccel = -afij*((rij + c1
+          )*exp(-zeta*(rij+c1)*(rij+c1)) - c2*exp(-zeta*rij*rij));
 
       double ccelx = delx*ccel;
       double ccely = dely*ccel;

@@ -949,7 +949,7 @@ void LAMMPS::init()
   // NUFEB specific
 
   grid->init();
-  
+
   modify->init();        // modify must come after update, force, atom, domain
   neighbor->init();      // neighbor must come after force, modify
   comm->init();          // comm must come after force, modify, neighbor, atom

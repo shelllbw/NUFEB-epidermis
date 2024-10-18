@@ -31,7 +31,7 @@ FixPropertyAncestor::FixPropertyAncestor(LAMMPS *lmp, int narg, char **arg) :
 
   create_attribute = 1;
   // use vprop if size_peratom_cols = 0
-  size_peratom_cols = 0;
+  size_peratom_cols = 1;
   grow_arrays(atom->nmax);
 }
 

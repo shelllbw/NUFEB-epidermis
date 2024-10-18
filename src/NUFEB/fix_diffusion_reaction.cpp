@@ -222,7 +222,7 @@ void FixDiffusionReaction::compute_final()
 }
 
 /* ----------------------------------------------------------------------
- Average substrate distribution before solving diffusion in closed system.
+ Average substrate distribution before solving diffusion in closed   system.
  ------------------------------------------------------------------------- */
 void FixDiffusionReaction::closed_system_initial()
 {

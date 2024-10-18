@@ -29,13 +29,16 @@ class FixDivideStem : public FixDivide {
 
   FixDivideStem(class LAMMPS *, int, char **);
   virtual ~FixDivideStem();
+
+  void post_constructor();
   virtual void compute();
-  virtual void init();
   
  protected:
   int type_ta;    // atom type of TA cell
   int mask_ta;    // TA group mask
   int seed;
+  int icyto;
+  double k_cyto;
   char *group_id;
 
   double pa1, pa2, pb1, pb2;

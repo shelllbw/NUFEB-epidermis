@@ -28,7 +28,7 @@
 using namespace LAMMPS_NS;
 using namespace MathConst;
 
-#define DELTA 0.01
+#define DELTA 1.05
 
 /* ---------------------------------------------------------------------- */
 
@@ -59,10 +59,10 @@ FixDivideTA::~FixDivideTA()
 }
 
 /* ----------------------------------------------------------------------
-   initialization before run
+   if need to restore per-atom quantities, create new fix STORE styles
 ------------------------------------------------------------------------- */
 
-void FixDivideTA::init()
+void FixDivideTA::post_constructor()
 {
   // create fix nufeb/property/cycletime
   char **fixarg = new char*[3];
@@ -73,6 +73,20 @@ void FixDivideTA::init()
   modify->add_fix(3, fixarg, 1);
   delete [] fixarg;
   fix_ct = (FixPropertyCycletime *)modify->fix[modify->nfix-1];
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixDivideTA::init()
+{
+  for (int i = 0; i < atom->nlocal; i++) {
+    if (atom->mask[i] & groupbit) {
+      double div_time = log(2) / 0.00000321 ;
+      double prob = random->uniform();
+      fix_ct->aprop[i][0] = prob * div_time;
+      fix_ct->aprop[i][1] = prob * 216000;
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -88,7 +102,7 @@ void FixDivideTA::compute()
       const int cell =grid->cell(x[i]);
       double growth = grid->growth[igroup][cell][0];
       double div_time = log(2) / growth;
-// printf("TA %i = i %e %e\n", i, fix_ct->aprop[i][0], growth );
+
       // trigger cell division if current cell cycle time
       // is greater than calculated doubling time
       if (fix_ct->aprop[i][0] > div_time) {
@@ -104,6 +118,7 @@ void FixDivideTA::compute()
         // update daughter cell i
         double newx = oldx + (atom->shape[i][0] * cos(theta) * sin(phi) * DELTA);
         double newy = oldy + (atom->shape[i][1] * sin(theta) * sin(phi) * DELTA);
+        //double newz = oldz + (atom->shape[i][2] * cos(phi) * DELTA*0.2);
 
         atom->x[i][0] = newx;
         atom->x[i][1] = newy;
@@ -113,6 +128,7 @@ void FixDivideTA::compute()
         double *coord = new double[3];
         newx = oldx - (atom->shape[i][0] * cos(theta) * sin(phi) * DELTA);
         newy = oldy - (atom->shape[i][1] * sin(theta) * sin(phi) * DELTA);
+        //newz = oldz + (atom->shape[i][2] * cos(phi) * DELTA*0.2);
 
         coord[0] = newx;
         coord[1] = newy;

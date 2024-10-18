@@ -1,0 +1,138 @@
+#-----------------------------------------------------------------------------#
+#                NUFEB Simulation: Epidermis dynamics                         #
+#-----------------------------------------------------------------------------#
+
+
+#-----------------------------System Settings--------------------------------#
+
+newton          on                          # forces between local and ghost
+                                            # atoms are computed in each
+					     # processor without communication
+					     
+processors      * * 1                       # processor grid
+
+region desq_domain block 0 5e-4 0 1e-4 0 2.5e-4 units box
+
+read_restart restart.250
+
+reset_timestep 1
+
+#------------------------Cells and Functional Groups-------------------------#
+
+neighbor       5e-6 bin                   # setting neighbour skin distance and style
+
+neigh_modify    check yes exclude type 1 1    # rebuild neighbour list if any atom
+                                                # had moved more than half the skin distance
+
+#--------------------------Mesh Grid and Substrates--------------------------#
+
+# defining grid sytle, substrate names, and grid size
+grid_style      nufeb/chemostat 3 gf ca cyto 5e-6
+
+# set diffusion boundary conditions and initial concentrations (liquid:kg/m3)
+grid_modify     set gf  pp pp pp 0.0 bulk 1400
+grid_modify     set ca  pp pp nd 0.048 
+grid_modify     set cyto  pp pp pp 0.0 
+
+#--------------------------Biological Processes-------------------------------#
+compute ch all skin/base_height 720000 STEM TA
+
+variable x equal 60
+variable y equal 40
+variable z equal 28
+
+variable  xx internal 0.0
+variable  yy internal 0.0
+variable  zz internal 0.0
+
+lattice sc 0.5e-5 origin 0.5 0.5 0.5
+region reg block 0 EDGE 0 EDGE 0 $z
+
+# variable sine equal "c_ch/2 * cos(v_xx/xlat * 1.9*PI*PI/v_x) * cos(v_yy/ylat * 0.64*PI*PI/v_y)"
+variable sine equal "c_ch/2 * cos(v_xx/xlat * 1.9*PI*PI/v_x)"
+
+# create BASE cells
+variable bm_sin equal "v_sine + v_z*zlat-c_ch/2 - v_zz"
+variable v_bm equal "v_bm_sin > 0.0"
+
+
+fix update_bm BASE skin/update_base 1 region reg var v_bm set x xx set y yy set z zz
+
+fix g_sc STEM skin/growth/basal gf cyto 0.001 growth 0.000001284 
+fix g_ta TA skin/growth/basal gf cyto 0.1 growth 0.00000321  
+
+fix div_ta TA skin/division/ta 2023 
+fix diff_ta TA skin/differentiation/ta 4 SPIN 900000 90000 cyto 1.5 2023
+
+# pa=TA+TA pb=TA+SC pc=SC+SC
+fix div_sc STEM skin/division/stem 3 TA cyto 0.2 2022 pa 0.1 0.0 pb 0.8 0.4
+
+
+fix g_spin BASE skin/growth/base ca yield 10
+
+fix f_fstate all skin/property/diffstate ca r_max 5e-5 ks 0.018 groups 2 SPIN GRAN
+fix f_deform all skin/deformation 2.5 2 adiff GRAN 5 0.4 adiff CORN 6 2.0 groups 2 SPIN GRAN
+
+#fix f_desq SPIN evaporate 1 1000000 desq_domain 2025
+
+fix f_sec all skin/secretion 2 3 gf cyto 100 yield 0.00001 decay 0.000003
+
+#---------------------------Physical Processes--------------------------------#
+
+pair_style skin 2e-5
+pair_coeff * * 20
+pair_coeff 1 * 200
+
+fix nve all nve/limit 2e-6 
+fix vis all viscous 1.5e-12
+
+fix adh TA skin/adhesion 7 5e-6 860000
+fix_modify adh af * * 0.1e-14
+fix_modify adh af 1 2 3.0e-13
+fix_modify adh af 1 3 1.0e-14
+
+region rete_domain block 0 5e-4 0 0.5e-4 0.0e-4 0.9e-4 units box
+
+fix sf_base BASE setforce 0.0 0.0 0.0
+fix sf_ta TA addforce 0.0 0.0 -2e-20
+fix sf_stem STEM addforce 0.0 0.0 -2e-20
+
+#---------------------------Chemical Processes---------------------------------#
+
+fix diff_ca all nufeb/diffusion_reaction ca 1e-9           # diffusion reaction for updating
+                                                            # distribusion of calcium concentration
+
+
+#--------------------------Computations and Outputs----------------------------#
+
+variable nstem equal "count(STEM)"                        # total # of STEM
+variable nta equal "count(TA)"                            # total # of TA
+variable nspin equal "count(SPIN)"                            # total # of SPIN
+variable ngran equal "count(GRAN)"                            # total # of GRAN
+variable ncorn equal "count(CORN)"                            # total # of CORN
+variable nepi equal "v_nstem+v_nspin+v_nta+v_ngran+v_ncorn"
+
+compute         p0 all property/atom shapex shapey shapez
+#fix             p1 all skin/property/turnover types 2 2 3
+#fix             p2 all skin/property/turnover types 2 4 5
+
+dump           d0 all custom 1 dump.skin id type x y z  c_p0[1] c_p0[2] c_p0[3]           
+dump_modify    d0 colname c_p0[1] shapex colname c_p0[2] shapey colname c_p0[3] shapez 
+ 
+thermo_style custom step cpu v_nepi v_nstem v_nta v_nspin v_ngran v_ncorn               # screen and log outputs
+thermo 1 
+thermo_modify lost ignore
+
+#-----------------------------------Run----------------------------------------#
+
+#shell mkdir vtk
+#dump du2 all grid/vtk 1 vtk/dump_%_*.vti con                     # require build NUFEB with vtk option
+
+# issue run command, define timesteps for physical (pairdt) and chemical (diffdt) processes
+run_style nufeb diffdt 1e-4 difftol 5e-6 pairdt 100 pairtol 1e-20 pairmax 1000 diffmax -1 screen no
+
+timestep 18000                                            # define biological timesteps (5h)
+
+
+run 200                                                  # growing biofilm for 900x1000s
+

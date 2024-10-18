@@ -21,6 +21,7 @@
 #include "random_park.h"
 #include "modify.h"
 #include "domain.h"
+#include "comm.h"
 #include "grid.h"
 #include "group.h"
 #include "fix_property_cycletime.h"
@@ -28,7 +29,7 @@
 using namespace LAMMPS_NS;
 using namespace MathConst;
 
-#define DELTA 0.1
+#define DELTA 1.05
 
 /* ---------------------------------------------------------------------- */
 
@@ -48,15 +49,21 @@ FixDivideStem::FixDivideStem(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR, "Can't find TA group in fix epidermis/division/stem command");
   mask_ta = 1 | group->bitmask[mask_ta];
 
-  seed = utils::inumeric(FLERR,arg[5],true,lmp);
+  icyto = grid->find(arg[5]);
+  if (icyto < 0)
+    error->all(FLERR, "Can't find cytokine name");
+  k_cyto = utils::numeric (FLERR,arg[6],true,lmp);
+  if (k_cyto <= 0)
+    error->all(FLERR, "cytokine affinity must be greater than zero");
+
+  seed = utils::inumeric(FLERR,arg[7],true,lmp);
 
   // Random number generator, same for all procs
   random = new RanPark(lmp, seed);
-
   group_id = new char[strlen(arg[1])+1];
   strcpy(group_id, arg[1]);
 
-  int iarg = 6;
+  int iarg = 8;
   while (iarg < narg) {
     if (strcmp(arg[iarg], "pa") == 0) {
       pa1 = utils::numeric(FLERR,arg[iarg+1],true,lmp);
@@ -81,20 +88,25 @@ FixDivideStem::~FixDivideStem()
 }
 
 /* ----------------------------------------------------------------------
-   initialization before run
+   if need to restore per-atom quantities, create new fix STORE styles
 ------------------------------------------------------------------------- */
 
-void FixDivideStem::init()
+void FixDivideStem::post_constructor()
 {
   // create fix nufeb/property/cycletime
-  char **fixarg = new char*[3];
+  char **fixarg = new char*[7];
   fixarg[0] = (char *)"div_sc_ct";
   fixarg[1] = group_id;
   fixarg[2] = (char *)"nufeb/property/cycletime";
+  fixarg[3] = (char *)"seed";
+  fixarg[4] = (char *)"2023";
+  fixarg[5] = (char *)"max_time";
+  fixarg[6] = (char *)"504000";
 
-  modify->add_fix(3, fixarg, 1);
+  modify->add_fix(7, fixarg, 1);
   delete [] fixarg;
   fix_ct = (FixPropertyCycletime *)modify->fix[modify->nfix-1];
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -104,12 +116,13 @@ void FixDivideStem::compute()
   double **x = atom->x;
   int nlocal = atom->nlocal;
   double **conc = grid->conc;
+  double *bulk = grid->bulk;
 
   int itype, jtype;
   int imask, jmask;
+  int n = 0, flag = 1;
 
   for (int i = 0; i < nlocal; i++) {
-
     if (atom->mask[i] & groupbit) {
       const int cell =grid->cell(x[i]);
       double growth = grid->growth[igroup][cell][0];
@@ -117,14 +130,20 @@ void FixDivideStem::compute()
       //printf("SC %i = i %e %e\n", i, fix_ct->aprop[i][0], growth );
       // trigger cell division if current cell cycle time
       // is greater than calculated doubling time
-      if (fix_ct->aprop[i][0] > div_time) {
+      double ct = fix_ct->aprop[i][0];
+      double pg = random->gaussian();
+
+      if (ct + (ct*0.15*pg)  > div_time) {
         int cell = grid->cell(atom->x[i]);
         double prob = random->uniform();
 
         // apply hill function later
-        double pa = pa1 + pa2;
-        double pb = pb1 + pb2;
-
+        double pa = pa1;
+        double pb = pb1 - (pb2 * 1 / (1 + exp(k_cyto * (bulk[icyto] - 35))));
+        if (flag == 1) {
+          //if(comm->me == 0) printf("pa = %e pb = %e  f=%e\n", pa, pb, 1 / (1+exp(-k_cyto * (bulk[icyto] - 50))));
+          flag = 0;
+        }
         if (prob < pa) {
           // symmetric divide into two TA cells
           itype = type_ta;
@@ -200,6 +219,7 @@ void FixDivideStem::compute()
       }
     }
   }
+  MPI_Allreduce(MPI_IN_PLACE, &n, 1, MPI_INT, MPI_SUM, world);
 
   bigint nblocal = atom->nlocal;
   MPI_Allreduce(&nblocal, &atom->natoms, 1, MPI_LMP_BIGINT, MPI_SUM, world);
